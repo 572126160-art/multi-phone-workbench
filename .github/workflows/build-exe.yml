@@ -1,0 +1,32 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - launcher.py
+      - .github/workflows/build-exe.yml
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Build EXE
+        run: pyinstaller --noconfirm --onefile --windowed --name "多手机工作台_V1.0.0" launcher.py
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: 多手机工作台_V1.0.0
+          path: dist/多手机工作台_V1.0.0.exe
