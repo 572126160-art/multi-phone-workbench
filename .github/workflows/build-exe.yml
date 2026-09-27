@@ -7,6 +7,9 @@ on:
       - launcher.py
       - .github/workflows/build-exe.yml
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -25,8 +28,20 @@ jobs:
       - name: Build EXE
         run: pyinstaller --noconfirm --onefile --windowed --name "多手机工作台_V1.0.0" launcher.py
 
-      - name: Upload EXE
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: 多手机工作台_V1.0.0
           path: dist/多手机工作台_V1.0.0.exe
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v1.0.0"
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --title "多手机工作台 V1.0.0" --notes "Windows EXE 测试版"
+          }
+          gh release upload $tag "dist/多手机工作台_V1.0.0.exe" --clobber
