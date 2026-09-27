@@ -1,0 +1,22 @@
+<!doctype html><html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes"><title>手机 __PHONE_NO__</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}.wrap{max-width:620px;margin:auto;padding:14px 12px}
+.card{min-height:calc(100vh - 28px);background:#fff;border-radius:22px;padding:18px;display:flex;flex-direction:column}h1{font-size:23px;margin:0}.sub{font-size:12px;color:#777;margin-top:5px}
+.progress{margin:16px 0;padding:12px;background:#f7f7f8;border-radius:13px}.current{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center}.filename{font-size:20px;font-weight:750;word-break:break-all}
+.send{width:100%;border:0;border-radius:18px;padding:20px 14px;background:#111;color:#fff;font-size:20px;font-weight:800}.hint{text-align:center;font-size:12px;color:#888;margin-top:9px}.tools{display:flex;gap:8px;margin-top:10px}.tool{flex:1;border:0;border-radius:11px;padding:10px;background:#eee;font-weight:650}
+</style></head><body><div class="wrap"><div class="card">
+<h1>📱 手机 __PHONE_NO__</h1><div class="sub">建议添加到 iPhone 主屏幕，以后直接点开，不需要再扫码。</div>
+<div class="progress"><b id="done">0</b> / <span id="total">0</span> 已处理</div>
+<div class="current"><div id="idx" style="font-size:13px;color:#888;margin-bottom:8px">当前任务</div><div id="name" class="filename">加载中…</div><div id="size" style="font-size:12px;color:#999;margin-top:7px"></div></div>
+<button id="send" class="send" onclick="go()">发送下一条到小红书</button><div class="hint">点一次 → 快捷指令 → 系统分享 → 小红书</div>
+<div class="tools"><button class="tool" onclick="act('undo')">退回一条</button><button class="tool" onclick="act('reset')">重置进度</button></div>
+</div></div><script>
+const P=__PHONE_INDEX__;let D=null,busy=false;
+function load(){fetch('/info?x='+Date.now()).then(r=>r.json()).then(x=>{D=x.phones[P];draw()})}
+function draw(){if(!D)return;const t=D.videos.length,d=Math.min(D.progress.done,t);done.textContent=d;total.textContent=t;if(!t){name.textContent='暂无任务';send.disabled=true;return}if(d>=t){idx.textContent='全部完成';name.textContent='✅ 今天这台手机已完成';size.textContent='';send.style.display='none';return}send.style.display='block';send.disabled=false;const v=D.videos[d];idx.textContent='第 '+(d+1)+' / '+t+' 条';name.textContent=v.name;size.textContent=v.size_mb+' MB';fetch(v.video_url,{cache:'force-cache'}).catch(()=>{})}
+function act(a){return fetch('/progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:P,action:a})}).then(()=>load())}
+function go(){if(busy||!D)return;const d=Math.min(D.progress.done,D.videos.length);if(d>=D.videos.length)return;busy=true;const u=D.videos[d].shortcut_url;act('advance');location.href=u;setTimeout(()=>busy=false,1000)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){busy=false;setTimeout(load,250)}});load();
+</script></body></html>
