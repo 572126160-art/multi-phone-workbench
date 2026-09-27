@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>多手机工作台</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#111}
+.wrap{max-width:1400px;margin:16px auto;padding:0 16px}.card{background:#fff;border-radius:22px;padding:22px;box-shadow:0 8px 28px rgba(0,0,0,.05)}
+h1{margin:0 0 6px;font-size:28px}.sub{color:#777;margin-bottom:14px}.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap;background:#f8f8f9;padding:12px;border-radius:15px}
+label{font-size:12px;color:#666;display:block;margin-bottom:5px}input[type=number]{width:110px;padding:10px;border:1px solid #ddd;border-radius:10px;font-size:15px}
+button,.pick{border:0;border-radius:10px;padding:10px 14px;font-weight:700;background:#111;color:#fff;cursor:pointer}.secondary{background:#ececef;color:#111}
+.drop{margin-top:12px;border:2px dashed #ccc;border-radius:18px;padding:22px;text-align:center;background:#fafafa}.drop.over{background:#f0f0f0;border-color:#111}
+input[type=file]{display:none}.status{font-size:13px;color:#666;margin-top:9px}.phones{display:grid;gap:12px;margin-top:14px}
+.phone{background:#f8f8f9;border-radius:16px;padding:13px}.head{display:flex;justify-content:space-between}.tag{font-size:11px;background:#eee;border-radius:999px;padding:4px 8px}
+.qr{width:118px;height:118px;display:block;margin:8px auto;border-radius:8px;background:#fff}.url{font-size:9px;color:#999;word-break:break-all}.item{font-size:11px;padding:4px 0;border-bottom:1px solid #e8e8e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:900px){.phones{grid-template-columns:repeat(2,1fr)!important}}
+</style></head><body>
+<div class="wrap"><div class="card">
+<h1>⚡ 多手机工作台</h1><div class="sub">网页自动从 GitHub 获取最新版。设置几台，就只显示几台。</div>
+<div class="row">
+<div><label>手机数量</label><input id="phoneCount" type="number" min="1" max="20" value="3"></div>
+<button onclick="applyCount()">应用数量</button><button class="secondary" onclick="clearAll()">清空今日任务</button>
+<div style="margin-left:auto;font-size:13px;color:#666">版本：<b id="ver">在线版</b></div>
+</div>
+<div id="drop" class="drop"><div style="font-size:38px">🎬</div><b>把今天全部视频拖进来</b><div style="font-size:12px;color:#888;margin:6px 0 10px">自动平均分配到当前手机数量</div>
+<label class="pick" for="file" style="display:inline-block;color:white">选择多条视频</label><input id="file" type="file" accept="video/*" multiple><div id="status" class="status">还没有视频</div></div>
+<div id="phones" class="phones"></div>
+</div></div>
+<script>
+const file=document.getElementById("file"),drop=document.getElementById("drop");
+function cols(n){return n<=4?n:(n<=6?3:(n<=8?4:5))}
+function render(d){
+ document.getElementById("phoneCount").value=d.phone_count;
+ const root=document.getElementById("phones");root.style.gridTemplateColumns='repeat('+cols(d.phone_count)+',minmax(0,1fr))';root.innerHTML='';
+ d.phones.forEach((p,i)=>{
+  const u=location.origin+'/phone/'+i;
+  const e=document.createElement('div');e.className='phone';
+  const done=Math.min(p.progress.done,p.videos.length);
+  e.innerHTML='<div class="head"><b>📱 手机 '+(i+1)+'</b><span class="tag">'+done+'/'+p.videos.length+'</span></div>'+
+  '<img class="qr" src="https://api.qrserver.com/v1/create-qr-code/?size=360x360&data='+encodeURIComponent(u)+'"><div class="url">'+u+'</div>'+
+  '<div style="margin-top:7px">'+(p.videos.length?p.videos.map((v,j)=>'<div class="item">'+(j+1)+'. '+v.name+'</div>').join(''):'<div class="item">暂无任务</div>')+'</div>';
+  root.appendChild(e);
+ });
+}
+function refresh(){fetch('/info?x='+Date.now()).then(r=>r.json()).then(render)}
+function applyCount(){const count=+document.getElementById("phoneCount").value||1;fetch('/set_phone_count',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({count})}).then(refresh)}
+function clearAll(){fetch('/clear',{method:'POST'}).then(()=>{status.textContent='已清空';refresh()})}
+function upload(fs){const a=[...fs];if(!a.length)return;let i=0;function next(){if(i>=a.length){status.textContent='完成，共导入 '+a.length+' 条视频';refresh();return}const f=a[i];status.textContent='正在处理 '+(i+1)+'/'+a.length+'：'+f.name;const x=new XMLHttpRequest();x.open('POST','/upload?index='+i+'&total='+a.length);x.setRequestHeader('X-Filename',encodeURIComponent(f.name));x.setRequestHeader('X-Mime',f.type||'video/mp4');x.onload=()=>{if(x.status===200){i++;next()}else status.textContent='失败：'+x.responseText};x.send(f)}next()}
+file.onchange=()=>upload(file.files);['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));drop.addEventListener('drop',e=>upload(e.dataTransfer.files));
+refresh();setInterval(refresh,1500);
+</script></body></html>
